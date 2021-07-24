@@ -19,7 +19,6 @@ with open('bug_list_total.txt', newline='') as f:
 # bug_id_list = pickle.load(infile)
 # infile.close()
 
-# bug_id_list_total = bug_id_list_total[:1]
 bug_list = []
 reject_list = []
 i = 0
@@ -36,7 +35,8 @@ for bug_id_val in bug_id_list_total:
         change_codes = ["UNCONFIRMED", "CONFIRMED", "IN_PROGRESS", "RESOLVED", "VERIFIED", "FIXED", "INVALID",
                         "WONTFIX", "DUPLICATE", "WORKSFORME", "REOPENED"]
 
-        change_date_dict = [("CREATED", re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2} \w{3}', single_bug_data_created).group())]
+        change_date_dict = [
+            ("CREATED", re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2} \w{3}', single_bug_data_created).group())]
 
         temp_dict = {"bug_id": int(bug_id_val),
                      "status_res": single_bug_data[0][1],
