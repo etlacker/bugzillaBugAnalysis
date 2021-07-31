@@ -7,8 +7,11 @@ from brokenaxes import brokenaxes
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 from pandas.core import nanops
+# need to install openpyxl
 
-# # pd.set_option("display.max_rows", None)
+save = False
+
+# pd.set_option("display.max_rows", None)
 # pd.set_option("display.max_columns", None)
 #
 # infile = open("scraped_bug_data", 'rb')
@@ -49,13 +52,15 @@ from pandas.core import nanops
 # bug_df.to_excel("bug_data.xlsx")
 
 # At this point, the bug_data.xlsx was manually reviewed for incorrect bugs.
-# The bug_data.xlsx that exists in this folder is the reviewed dataset.
+# The bug_data.xlsx that exists in this repository is the reviewed dataset.
 
 
 # ------------------------------------------------- Analyze DF ---------------------------------------------------------
 
 bug_df = pd.read_excel('bug_data.xlsx')
 bug_df.drop(bug_df[bug_df['resolution'] == "NOT_ECLIPSE" ].index, inplace=True)
+
+# print(bug_df.describe())
 
 total_bugs = bug_df['bug_id'].count()
 # print("Counts of Statuses in Full DB: \n", bug_df["status"].value_counts(dropna=False))
@@ -65,7 +70,12 @@ print(bug_df['bug_id'].count())
 
 res_df = bug_df[bug_df.status == 'RESOLVED'].append(
     bug_df[bug_df.status == 'CLOSED']).append(bug_df[bug_df.status == 'VERIFIED'])
-print("\nCounts of Resolutions in Resolved DB: \n", res_df["resolution"].value_counts(dropna=False))
+# print("\nCounts of Resolutions in Resolved DB: \n", res_df["resolution"].value_counts(dropna=False))
+
+fixed_df = res_df[res_df.resolution == 'FIXED']
+fixed_total = nanops.nansum(fixed_df['time_passed_last'])
+print("\nFixed count: ", fixed_df['bug_id'].count(), " fixed total: ", fixed_total,
+      " avg: ", fixed_total/fixed_df['bug_id'].count())
 
 # nanops.nansum ignores null values, just like .count()
 touch_total = nanops.nansum(bug_df['time_passed_touch'])
@@ -115,47 +125,49 @@ print("DUPLICATE total: ", duplicate_count['bug_id'].count(), " DUPLICATE rate: 
 
 # Broken Axis Histogram Submitted -> First Modified
 plt.subplot(4, 1, 1)
-ax1 = touch_df['time_passed_touch'].plot.hist(by='bug_id', bins=60)
+ax1 = touch_df['time_passed_touch'].plot.hist(by='bug_id', bins=56)
+# print("\n value counts touch: \n", touch_df['time_passed_touch'].value_counts(bins=56))
 ax1.set_ylim(4000, 5000)
-ax1.spines['bottom'].set_visible(False)
+ax1.yaxis.tick_right()
 ax1.xaxis.tick_top()
 ax1.tick_params(labeltop=False)
 ax1.set_facecolor("lightgrey")
 ax1.set_ylabel("")
-# plt.title("Days Before a Bug is Modified")
+plt.grid(axis='x')
 plt.subplot(4, 1, (2, 4))
-ax3 = touch_df['time_passed_touch'].plot.hist(by='bug_id', bins=60)
-ax3.set_ylim(0, 35)
-ax3.spines['top'].set_visible(False)
+ax3 = touch_df['time_passed_touch'].plot.hist(by='bug_id', bins=56)
+ax3.set_ylim(0, 40)
 ax3.xaxis.tick_bottom()
 ax3.set_facecolor("lightgrey")
 ax3.set_ylabel("")
 plt.xlabel("Time Passed (Days)", fontweight='bold')
 plt.ylabel("Count of Bugs", fontweight='bold')
-plt.savefig("graphics/time_touch_hist.pdf", bbox_inches='tight')
+plt.grid(axis='x')
+if save: plt.savefig("graphics/time_touch_hist.pdf", bbox_inches='tight')
 # plt.show()
 
 # Broken Axis Histogram Submitted -> Last Modified
 plt.cla()
 plt.subplot(5, 1, 1)
-# plt.title("Days Before a Bug is Resolved")
-ax1 = touch_df['time_passed_last'].plot.hist(by='bug_id', bins=60)
+ax1 = touch_df['time_passed_last'].plot.hist(by='bug_id', bins=56)
+# print("\n value counts res: \n", touch_df['time_passed_last'].value_counts(bins=56))
 ax1.set_ylim(2000, 3000)
-ax1.spines['bottom'].set_visible(False)
+ax1.yaxis.tick_right()
 ax1.xaxis.tick_top()
 ax1.tick_params(labeltop=False)
 ax1.set_facecolor("lightgrey")
 ax1.set_ylabel("")
+plt.grid(axis='x')
 plt.subplot(5, 1, (2, 5))
-ax3 = touch_df['time_passed_last'].plot.hist(by='bug_id', bins=60)
+ax3 = touch_df['time_passed_last'].plot.hist(by='bug_id', bins=56)
 ax3.set_ylim(0, 300)
-ax3.spines['top'].set_visible(False)
 ax3.xaxis.tick_bottom()
 ax3.set_facecolor("lightgrey")
 ax3.set_ylabel("")
 plt.xlabel("Time Passed (Days)", fontweight='bold')
 plt.ylabel("Count of Bugs", fontweight='bold')
-plt.savefig("graphics/time_last_hist.pdf", bbox_inches='tight')
+plt.grid(axis='x')
+if save: plt.savefig("graphics/time_last_hist.pdf", bbox_inches='tight')
 # plt.show()
 
 # Scatter Plot Resolution vs. Modification for all bugs
@@ -165,7 +177,7 @@ ax3.set_ybound(-500, 7500)
 ax3.set_xbound(-500, 7500)
 ax3.set_xlabel("RESOLUTION TIME (days)", fontweight='bold')
 ax3.set_ylabel("MODIFICATION TIME (days)", fontweight='bold')
-plt.savefig("graphics/all_scatter.pdf", bbox_inches='tight')
+if save: plt.savefig("graphics/all_scatter.pdf", bbox_inches='tight')
 # plt.show()
 
 # Scatter Plot Resolution vs. Modification for WONTFIX bugs
@@ -175,7 +187,7 @@ ax3.set_ybound(-500, 7500)
 ax3.set_xbound(-500, 7500)
 ax3.set_xlabel("RESOLUTION TIME (days)", fontweight='bold')
 ax3.set_ylabel("MODIFICATION TIME (days)", fontweight='bold')
-plt.savefig("graphics/wontfix_scatter.pdf", bbox_inches='tight')
+if save: plt.savefig("graphics/wontfix_scatter.pdf", bbox_inches='tight')
 # plt.show()
 
 # Scatter Plot Resolution vs. Modification w/o WONTFIX bugs
@@ -185,18 +197,21 @@ ax3.set_ybound(-500, 7500)
 ax3.set_xbound(-500, 7500)
 ax3.set_xlabel("RESOLUTION TIME (days)", fontweight='bold')
 ax3.set_ylabel("MODIFICATION TIME (days)", fontweight='bold')
-plt.savefig("graphics/without_wontfix_scatter.pdf", bbox_inches='tight')
+if save: plt.savefig("graphics/without_wontfix_scatter.pdf", bbox_inches='tight')
 # plt.show()
 
 # Trend of resolved bugs created by year
+linestyle = ["-", ":", "--"]
 plt.cla()
 res_df["created_year"] = res_df.apply(lambda x: int(x['first_modified'][:4]), axis=1)
-# print("\nALL bugs resolution counts by year: \n", res_df.groupby('created_year')['bug_id'].count())
-ax3 = res_df.groupby('created_year')['bug_id'].nunique().plot.line()
+# print("\nALL bugs creation counts by year: \n", res_df.groupby('created_year')['bug_id'].count())
+# print(res_df['created_year'].describe())
+ax3 = res_df.groupby('created_year')['bug_id'].nunique().plot.line(style='-')
 
 res_df["resolved_year"] = res_df.apply(lambda x: int(x['last_modified'][:4]), axis=1)
 # print("\nALL bugs resolution counts by year: \n", res_df.groupby('resolved_year')['bug_id'].count())
-ax3 = res_df.groupby('resolved_year')['bug_id'].nunique().plot.line()
+# print(res_df['resolved_year'].describe())
+ax3 = res_df.groupby('resolved_year')['bug_id'].nunique().plot.line(style=':')
 
 ax3.set_ybound(0, 800)
 ax3.set_xbound(2000, 2020)
@@ -204,26 +219,28 @@ ax3.set_xlabel("YEAR", fontweight='bold')
 ax3.set_ylabel("COUNT OF BUGS", fontweight='bold')
 ax3.xaxis.set_major_formatter(ticker.FormatStrFormatter('%0.f'))
 plt.xticks(np.arange(2001, 2022, 3))
-plt.savefig("graphics/allbugs_trendlines.pdf", bbox_inches='tight')
+plt.legend(["Bug Submissions", "Bug Resolutions"])
+if save: plt.savefig("graphics/allbugs_trendlines.pdf", bbox_inches='tight')
 # plt.show()
 
-# Trend of WONTFIX bug resolutions by year
+# Trend of WONTFIX bug resolutions by year (part of all 3)
 wontfix_df["resolved_year"] = wontfix_df.apply(lambda x: int(x['last_modified'][:4]), axis=1)
 # print("\nWONTFIX resolution counts by year: \n", wontfix_df.groupby('resolved_year')['bug_id'].count())
-ax3 = wontfix_df.groupby('resolved_year')['bug_id'].nunique().plot.line()
+ax3 = wontfix_df.groupby('resolved_year')['bug_id'].nunique().plot.line(style='--')
 ax3.set_ybound(0, 800)
 ax3.set_xbound(2000, 2020)
 # ax3.set_title("Trendline of WONTFIX Bug Resolutions Per Year")
 ax3.set_xlabel("YEAR", fontweight='bold')
 plt.xticks(np.arange(2001, 2022, 3))
-plt.savefig("graphics/all_three_trendline.pdf", bbox_inches='tight')
+plt.legend(["Bug Submissions", "Bug Resolutions", "WONTFIX Resolutions"])
+if save: plt.savefig("graphics/all_three_trendline.pdf", bbox_inches='tight')
 # plt.show()
 
 # Trend of WONTFIX bug resolutions by year
 plt.cla()
 wontfix_df["resolved_year"] = wontfix_df.apply(lambda x: int(x['last_modified'][:4]), axis=1)
 # print("\nWONTFIX resolution counts by year: \n", wontfix_df.groupby('resolved_year')['bug_id'].count())
-ax3 = wontfix_df.groupby('resolved_year')['bug_id'].nunique().plot.line()
+ax3 = wontfix_df.groupby('resolved_year')['bug_id'].nunique().plot.line(style='--', color='g')
 ax3.set_ybound(0, 800)
 ax3.set_xbound(2000, 2020)
 # ax3.set_title("Trendline of WONTFIX Bug Resolutions Per Year")
@@ -231,5 +248,6 @@ ax3.set_xlabel("YEAR", fontweight='bold')
 ax3.set_ylabel("COUNT OF BUGS", fontweight='bold')
 ax3.xaxis.set_major_formatter(ticker.FormatStrFormatter('%0.f'))
 plt.xticks(np.arange(2001, 2022, 3))
-plt.savefig("graphics/wontfix_trendline.pdf", bbox_inches='tight')
+plt.legend(["WONTFIX Resolutions"])
+if save: plt.savefig("graphics/wontfix_trendline.pdf", bbox_inches='tight')
 # plt.show()
