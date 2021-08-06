@@ -11,7 +11,7 @@ from matplotlib import ticker
 from pandas.core import nanops
 # need to install openpyxl
 
-save = True
+save = False
 
 # pd.set_option("display.max_rows", None)
 # pd.set_option("display.max_columns", None)
