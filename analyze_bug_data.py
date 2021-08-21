@@ -11,9 +11,9 @@ from matplotlib import ticker
 from pandas.core import nanops
 # need to install openpyxl
 
-save = False
+save = True
 
-# pd.set_option("display.max_rows", None)
+pd.set_option("display.max_rows", None)
 # pd.set_option("display.max_columns", None)
 #
 # infile = open("scraped_bug_data", 'rb')
@@ -73,11 +73,15 @@ print(bug_df['bug_id'].count())
 res_df = bug_df[bug_df.status == 'RESOLVED'].append(
     bug_df[bug_df.status == 'CLOSED']).append(bug_df[bug_df.status == 'VERIFIED'])
 print("\nCounts of Resolutions in Resolved DB: \n", res_df["resolution"].value_counts(dropna=False))
+# print("\nMODE time_passed_last res_df: \n", res_df['time_passed_last'].value_counts())
 
 fixed_df = res_df[res_df.resolution == 'FIXED']
 fixed_total = nanops.nansum(fixed_df['time_passed_last'])
 print("\nFixed count: ", fixed_df['bug_id'].count(), " fixed total: ", fixed_total,
       " avg: ", fixed_total/fixed_df['bug_id'].count())
+# print("\nMODE time_passed_last fixed_df: \n", fixed_df['time_passed_last'].value_counts())
+fixed_three_mo = fixed_df[fixed_df['time_passed_last'] < 93]
+print("\nFIXED IN 3 MO: ", fixed_three_mo.count())
 
 # nanops.nansum ignores null values, just like .count()
 touch_total = nanops.nansum(bug_df['time_passed_touch'])
@@ -101,12 +105,24 @@ print("\ngenie/webmaster resolved bugs: ", genie_df['bug_id'].count())
 
 # Create WONTFIX
 wontfix_df = bug_df[bug_df.resolution == 'WONTFIX']
-# print("\nCounts of Authors in WONTFIX DB: \n", res_df["last_modified_author"].value_counts(dropna=False))
+print("\nCounts of Authors in WONTFIX DB: \n", wontfix_df["last_modified_author"].value_counts(dropna=False))
+close_origin_ct_wontfix = wontfix_df[(wontfix_df['time_passed_last'] <= 93)
+                                     & (wontfix_df['time_passed_touch'] <= 93)]
+print("\nwontfix origin ct: ", close_origin_ct_wontfix.count(), " total: ", wontfix_df.count())
+print("\nWONTFIX avg closed time passed: ", wontfix_df['time_passed_last'].mean())
 
 # Create subset w/o WONTFIX bugs
-without_wontfix_df = bug_df
+without_wontfix_df = res_df
 cond = without_wontfix_df['bug_id'].isin(wontfix_df['bug_id'])
 without_wontfix_df.drop(without_wontfix_df[cond].index, inplace=True)
+close_origin_ct_wo_wontfix = without_wontfix_df[(without_wontfix_df['time_passed_last'] <= 93)
+                                                & (without_wontfix_df['time_passed_touch'] <= 93)]
+print("\nwo_wontfix origin ct: ", close_origin_ct_wo_wontfix.count(), " total: ", without_wontfix_df.count())
+print("\nWO_WONTFIX avg closed time passed: ", without_wontfix_df['time_passed_last'].mean())
+
+auto_closed_df = wontfix_df[wontfix_df.time_passed_last == wontfix_df.time_passed_touch]
+print(auto_closed_df[auto_closed_df.time_passed_last == auto_closed_df.time_passed_last.max()])
+print("\nautoclosed: \n", auto_closed_df.describe())
 
 # Calculate and output rates
 print("WONTFIX total: ", wontfix_df['bug_id'].count(), " WONTFIX rate: ",
@@ -256,20 +272,18 @@ plt.clf()
 plt.imshow(heatmap.T, extent=extent, origin='lower', cmap=cm.Blues, norm=LogNorm())
 # plt.show()
 
-# Stacked Scatter Plots
-# wontfix
+# Overlayed Scatter Plots
 plt.cla()
 plt.clf()
 _, ax = plt.subplots()
 wontfix_df.plot.scatter(x="time_passed_last", y="time_passed_touch", s=3, c='red', ax=ax)
-# w/o wontfix
 without_wontfix_df.plot.scatter(x="time_passed_last", y="time_passed_touch", s=3, ax=ax)
 ax.set_ybound(-500, 7500)
 ax.set_xbound(-500, 7500)
 ax.set_xlabel("RESOLUTION TIME (days)", fontweight='bold')
 ax.set_ylabel("MODIFICATION TIME (days)", fontweight='bold')
 if save: plt.savefig("graphics/without_wontfix_scatter.pdf", bbox_inches='tight')
-plt.show()
+# plt.show()
 
 # Trend of resolved bugs created by year
 plt.cla()
@@ -290,7 +304,7 @@ ax3.set_xlabel("YEAR", fontweight='bold')
 ax3.set_ylabel("COUNT OF BUGS", fontweight='bold')
 ax3.xaxis.set_major_formatter(ticker.FormatStrFormatter('%0.f'))
 plt.xticks(np.arange(2001, 2022, 3))
-plt.legend(["Bug Submissions", "Bug Resolutions"])
+plt.legend(["Bug Submissions", "Closed Bugs"])
 if save: plt.savefig("graphics/allbugs_trendlines.pdf", bbox_inches='tight')
 # plt.show()
 
@@ -302,14 +316,14 @@ ax3.set_ybound(0, 800)
 ax3.set_xbound(2000, 2020)
 ax3.set_xlabel("YEAR", fontweight='bold')
 plt.xticks(np.arange(2001, 2022, 3))
-plt.legend(["Bug Submissions", "Bug Resolutions", "WONTFIX Resolutions"])
+plt.legend(["Bug Submissions", "Closed Bugs", "Closed WONTFIX Bugs"])
 if save: plt.savefig("graphics/all_three_trendline.pdf", bbox_inches='tight')
 # plt.show()
 
 # Trend of WONTFIX bug resolutions by year
 plt.cla()
 wontfix_df["resolved_year"] = wontfix_df.apply(lambda x: int(x['last_modified'][:4]), axis=1)
-# print("\nWONTFIX resolution counts by year: \n", wontfix_df.groupby('resolved_year')['bug_id'].count())
+print("\nWONTFIX resolution counts by year: \n", wontfix_df.groupby('resolved_year')['bug_id'].count())
 ax3 = wontfix_df.groupby('resolved_year')['bug_id'].nunique().plot.line(style='--', color='#4daf4a')
 ax3.set_ybound(0, 800)
 ax3.set_xbound(2000, 2020)
@@ -317,6 +331,6 @@ ax3.set_xlabel("YEAR", fontweight='bold')
 ax3.set_ylabel("COUNT OF BUGS", fontweight='bold')
 ax3.xaxis.set_major_formatter(ticker.FormatStrFormatter('%0.f'))
 plt.xticks(np.arange(2001, 2022, 3))
-plt.legend(["WONTFIX Resolutions"])
+plt.legend(["Closed WONTFIX Bugs"])
 if save: plt.savefig("graphics/wontfix_trendline.pdf", bbox_inches='tight')
 # plt.show()
